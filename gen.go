@@ -7,11 +7,13 @@ import (
 )
 
 var (
-	contextContext = protogen.GoIdent{GoName: "Context", GoImportPath: "context"}
-	grpcCallOption = protogen.GoIdent{GoName: "CallOption", GoImportPath: "google.golang.org/grpc"}
-	grpcMetadataMD = protogen.GoIdent{GoName: "MD", GoImportPath: "google.golang.org/grpc/metadata"}
-	errorsNew      = protogen.GoIdent{GoName: "New", GoImportPath: "errors"}
-	ioEOF          = protogen.GoIdent{GoName: "EOF", GoImportPath: "io"}
+	contextContext    = protogen.GoIdent{GoName: "Context", GoImportPath: "context"}
+	contextCancelFunc = protogen.GoIdent{GoName: "CancelFunc", GoImportPath: "context"}
+	contextWithCancel = protogen.GoIdent{GoName: "WithCancel", GoImportPath: "context"}
+	grpcCallOption    = protogen.GoIdent{GoName: "CallOption", GoImportPath: "google.golang.org/grpc"}
+	grpcMetadataMD    = protogen.GoIdent{GoName: "MD", GoImportPath: "google.golang.org/grpc/metadata"}
+	errorsNew         = protogen.GoIdent{GoName: "New", GoImportPath: "errors"}
+	ioEOF             = protogen.GoIdent{GoName: "EOF", GoImportPath: "io"}
 )
 
 func servername(s *protogen.Service, m *protogen.Method, g *protogen.GeneratedFile) string {
@@ -51,6 +53,7 @@ func GenForFile(g *protogen.GeneratedFile, f *protogen.File) {
 				g.P("err := client.Server.", m.GoName, "(&r.", servername(s, m, g), ")")
 				g.P("if err != nil {")
 				g.P("r.errfromsrv = err")
+				g.P("r.cancel()")
 				g.P("} else if r.errfromsrv == nil {")
 				g.P("r.errfromsrv = ", ioEOF)
 				g.P("}")
@@ -69,6 +72,9 @@ func GenForFile(g *protogen.GeneratedFile, f *protogen.File) {
 				g.P("if err != nil && r.errfromsrv == nil {")
 				g.P("r.errfromsrv = err")
 				g.P("}")
+				g.P("if err != nil {")
+				g.P("r.cancel()")
+				g.P("}")
 				g.P("}()")
 				g.P("return r, nil")
 				g.P("}")
@@ -86,6 +92,7 @@ func GenForFile(g *protogen.GeneratedFile, f *protogen.File) {
 				g.P("r.errfromsrv = ", ioEOF)
 				g.P("}")
 				g.P("close(r.toclient)")
+				g.P("r.cancel()")
 				g.P("} ()")
 				g.P("return r, nil")
 				g.P("}")
@@ -192,6 +199,7 @@ func genServerStream(s *protogen.Service, m *protogen.Method, g *protogen.Genera
 	g.P("header ", grpcMetadataMD)
 	g.P("trailer ", grpcMetadataMD)
 	g.P("ctx ", contextContext)
+	g.P("cancel ", contextCancelFunc)
 	g.P("errfromsrv error")
 	g.P("errfromclient error")
 	g.P("fromclient chan *", m.Input.GoIdent)
@@ -200,19 +208,23 @@ func genServerStream(s *protogen.Service, m *protogen.Method, g *protogen.Genera
 
 	// interface check
 	g.P("var _ ", s.GoName, "_", m.GoName, "Server = (*", mtypename, ")(nil)")
-	g.P("func (server *", mtypename, ") Context() ", contextContext, "{")
-	g.P("return server.ctx")
-	g.P("}")
 
 	// new
 	g.P("func new_", mtypename, "(ctx ", contextContext, ") ", mtypename, "{")
+	g.P("newctx, cancel := ", contextWithCancel, "(ctx)")
 	g.P("return ", mtypename, "{")
-	g.P("ctx: ctx,")
+	g.P("ctx: newctx,")
+	g.P("cancel: cancel,")
 	g.P("header: ", grpcMetadataMD, "{},")
 	g.P("trailer: ", grpcMetadataMD, "{},")
 	g.P("fromclient: make(chan *", m.Input.GoIdent, "),")
 	g.P("toclient: make(chan *", m.Output.GoIdent, "),")
 	g.P("}")
+	g.P("}")
+
+	// Context
+	g.P("func (server *", mtypename, ") Context() ", contextContext, "{")
+	g.P("return server.ctx")
 	g.P("}")
 
 	// SetHeader

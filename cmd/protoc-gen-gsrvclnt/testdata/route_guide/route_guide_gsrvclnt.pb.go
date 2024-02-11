@@ -65,6 +65,7 @@ type _RouteGuide_ListFeaturesSrvServerStream struct {
 	header        metadata.MD
 	trailer       metadata.MD
 	ctx           context.Context
+	cancel        context.CancelFunc
 	errfromsrv    error
 	errfromclient error
 	fromclient    chan *Rectangle
@@ -73,17 +74,19 @@ type _RouteGuide_ListFeaturesSrvServerStream struct {
 
 var _ RouteGuide_ListFeaturesServer = (*_RouteGuide_ListFeaturesSrvServerStream)(nil)
 
-func (server *_RouteGuide_ListFeaturesSrvServerStream) Context() context.Context {
-	return server.ctx
-}
 func new__RouteGuide_ListFeaturesSrvServerStream(ctx context.Context) _RouteGuide_ListFeaturesSrvServerStream {
+	newctx, cancel := context.WithCancel(ctx)
 	return _RouteGuide_ListFeaturesSrvServerStream{
-		ctx:        ctx,
+		ctx:        newctx,
+		cancel:     cancel,
 		header:     metadata.MD{},
 		trailer:    metadata.MD{},
 		fromclient: make(chan *Rectangle),
 		toclient:   make(chan *Feature),
 	}
+}
+func (server *_RouteGuide_ListFeaturesSrvServerStream) Context() context.Context {
+	return server.ctx
 }
 func (server *_RouteGuide_ListFeaturesSrvServerStream) SetHeader(m metadata.MD) error {
 	for k, v := range m {
@@ -129,6 +132,7 @@ func (client *_RouteGuide_SrvClient) ListFeatures(ctx context.Context, req *Rect
 			r.errfromsrv = io.EOF
 		}
 		close(r.toclient)
+		r.cancel()
 	}()
 	return r, nil
 }
@@ -191,6 +195,7 @@ type _RouteGuide_RecordRouteSrvServerStream struct {
 	header        metadata.MD
 	trailer       metadata.MD
 	ctx           context.Context
+	cancel        context.CancelFunc
 	errfromsrv    error
 	errfromclient error
 	fromclient    chan *Point
@@ -199,17 +204,19 @@ type _RouteGuide_RecordRouteSrvServerStream struct {
 
 var _ RouteGuide_RecordRouteServer = (*_RouteGuide_RecordRouteSrvServerStream)(nil)
 
-func (server *_RouteGuide_RecordRouteSrvServerStream) Context() context.Context {
-	return server.ctx
-}
 func new__RouteGuide_RecordRouteSrvServerStream(ctx context.Context) _RouteGuide_RecordRouteSrvServerStream {
+	newctx, cancel := context.WithCancel(ctx)
 	return _RouteGuide_RecordRouteSrvServerStream{
-		ctx:        ctx,
+		ctx:        newctx,
+		cancel:     cancel,
 		header:     metadata.MD{},
 		trailer:    metadata.MD{},
 		fromclient: make(chan *Point),
 		toclient:   make(chan *RouteSummary),
 	}
+}
+func (server *_RouteGuide_RecordRouteSrvServerStream) Context() context.Context {
+	return server.ctx
 }
 func (server *_RouteGuide_RecordRouteSrvServerStream) SetHeader(m metadata.MD) error {
 	for k, v := range m {
@@ -260,6 +267,9 @@ func (client *_RouteGuide_SrvClient) RecordRoute(ctx context.Context, opts ...gr
 		err := client.Server.RecordRoute(&r._RouteGuide_RecordRouteSrvServerStream)
 		if err != nil && r.errfromsrv == nil {
 			r.errfromsrv = err
+		}
+		if err != nil {
+			r.cancel()
 		}
 	}()
 	return r, nil
@@ -319,6 +329,7 @@ type _RouteGuide_RouteChatSrvServerStream struct {
 	header        metadata.MD
 	trailer       metadata.MD
 	ctx           context.Context
+	cancel        context.CancelFunc
 	errfromsrv    error
 	errfromclient error
 	fromclient    chan *RouteNote
@@ -327,17 +338,19 @@ type _RouteGuide_RouteChatSrvServerStream struct {
 
 var _ RouteGuide_RouteChatServer = (*_RouteGuide_RouteChatSrvServerStream)(nil)
 
-func (server *_RouteGuide_RouteChatSrvServerStream) Context() context.Context {
-	return server.ctx
-}
 func new__RouteGuide_RouteChatSrvServerStream(ctx context.Context) _RouteGuide_RouteChatSrvServerStream {
+	newctx, cancel := context.WithCancel(ctx)
 	return _RouteGuide_RouteChatSrvServerStream{
-		ctx:        ctx,
+		ctx:        newctx,
+		cancel:     cancel,
 		header:     metadata.MD{},
 		trailer:    metadata.MD{},
 		fromclient: make(chan *RouteNote),
 		toclient:   make(chan *RouteNote),
 	}
+}
+func (server *_RouteGuide_RouteChatSrvServerStream) Context() context.Context {
+	return server.ctx
 }
 func (server *_RouteGuide_RouteChatSrvServerStream) SetHeader(m metadata.MD) error {
 	for k, v := range m {
@@ -386,6 +399,7 @@ func (client *_RouteGuide_SrvClient) RouteChat(ctx context.Context, opts ...grpc
 		err := client.Server.RouteChat(&r._RouteGuide_RouteChatSrvServerStream)
 		if err != nil {
 			r.errfromsrv = err
+			r.cancel()
 		} else if r.errfromsrv == nil {
 			r.errfromsrv = io.EOF
 		}
