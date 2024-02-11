@@ -128,11 +128,11 @@ func (client *_RouteGuide_SrvClient) ListFeatures(ctx context.Context, req *Rect
 		err := client.Server.ListFeatures(req, &r._RouteGuide_ListFeaturesSrvServerStream)
 		if err != nil {
 			r.errfromsrv = err
+			r.cancel()
 		} else {
 			r.errfromsrv = io.EOF
 		}
 		close(r.toclient)
-		r.cancel()
 	}()
 	return r, nil
 }
@@ -187,6 +187,9 @@ func (client *_RouteGuide_RecordRouteSrvClientStream) Send(m *Point) error {
 	case <-client.ctx.Done():
 		client.errfromclient = client.ctx.Err()
 		client.CloseSend()
+		if client.errfromsrv != nil {
+			return client.errfromsrv
+		}
 		return client.ctx.Err()
 	}
 }
@@ -321,6 +324,9 @@ func (client *_RouteGuide_RouteChatSrvClientStream) Send(m *RouteNote) error {
 	case <-client.ctx.Done():
 		client.errfromclient = client.ctx.Err()
 		client.CloseSend()
+		if client.errfromsrv != nil {
+			return client.errfromsrv
+		}
 		return client.ctx.Err()
 	}
 }
