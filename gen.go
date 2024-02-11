@@ -178,7 +178,8 @@ func genClientStream(s *protogen.Service, m *protogen.Method, g *protogen.Genera
 		g.P("return nil")
 		g.P("case <- client.ctx.Done():")
 		g.P("client.errfromclient = client.ctx.Err()")
-		g.P("return client.CloseSend()")
+		g.P("client.CloseSend()")
+		g.P("return client.ctx.Err()")
 		g.P("}") // end select
 		g.P("}")
 	}

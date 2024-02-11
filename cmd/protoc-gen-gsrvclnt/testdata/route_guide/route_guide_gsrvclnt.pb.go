@@ -182,7 +182,8 @@ func (client *_RouteGuide_RecordRouteSrvClientStream) Send(m *Point) error {
 		return nil
 	case <-client.ctx.Done():
 		client.errfromclient = client.ctx.Err()
-		return client.CloseSend()
+		client.CloseSend()
+		return client.ctx.Err()
 	}
 }
 
@@ -309,7 +310,8 @@ func (client *_RouteGuide_RouteChatSrvClientStream) Send(m *RouteNote) error {
 		return nil
 	case <-client.ctx.Done():
 		client.errfromclient = client.ctx.Err()
-		return client.CloseSend()
+		client.CloseSend()
+		return client.ctx.Err()
 	}
 }
 
