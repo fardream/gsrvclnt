@@ -9,15 +9,23 @@ import (
 )
 
 type _RouteGuide_SrvClient struct {
-	Server RouteGuideServer
+	Server          RouteGuideServer
+	contextUpdaters []func(context.Context) (context.Context, error)
 }
 
 var _ RouteGuideClient = (*_RouteGuide_SrvClient)(nil)
 
-func NewRouteGuideSrvClient(server RouteGuideServer) RouteGuideClient {
-	return &_RouteGuide_SrvClient{Server: server}
+func NewRouteGuideSrvClient(server RouteGuideServer, contextUpdaters ...func(context.Context) (context.Context, error)) RouteGuideClient {
+	return &_RouteGuide_SrvClient{Server: server, contextUpdaters: contextUpdaters}
 }
 func (client *_RouteGuide_SrvClient) GetFeature(ctx context.Context, req *Point, opts ...grpc.CallOption) (*Feature, error) {
+	for _, u := range client.contextUpdaters {
+		var err error
+		ctx, err = u(ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
 	return client.Server.GetFeature(ctx, req)
 }
 
@@ -123,6 +131,13 @@ func (server *_RouteGuide_ListFeaturesSrvServerStream) Send(m *Feature) error {
 
 // do server streaming
 func (client *_RouteGuide_SrvClient) ListFeatures(ctx context.Context, req *Rectangle, opts ...grpc.CallOption) (RouteGuide_ListFeaturesClient, error) {
+	for _, u := range client.contextUpdaters {
+		var err error
+		ctx, err = u(ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
 	r := new__RouteGuide_ListFeaturesSrvClientStream(ctx)
 	go func() {
 		err := client.Server.ListFeatures(req, &r._RouteGuide_ListFeaturesSrvServerStream)
@@ -265,6 +280,13 @@ func (server *_RouteGuide_RecordRouteSrvServerStream) Recv() (*Point, error) {
 
 // do client streaming
 func (client *_RouteGuide_SrvClient) RecordRoute(ctx context.Context, opts ...grpc.CallOption) (RouteGuide_RecordRouteClient, error) {
+	for _, u := range client.contextUpdaters {
+		var err error
+		ctx, err = u(ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
 	r := new__RouteGuide_RecordRouteSrvClientStream(ctx)
 	go func() {
 		err := client.Server.RecordRoute(&r._RouteGuide_RecordRouteSrvServerStream)
@@ -400,6 +422,13 @@ func (server *_RouteGuide_RouteChatSrvServerStream) Recv() (*RouteNote, error) {
 
 // do bidirectional streaming
 func (client *_RouteGuide_SrvClient) RouteChat(ctx context.Context, opts ...grpc.CallOption) (RouteGuide_RouteChatClient, error) {
+	for _, u := range client.contextUpdaters {
+		var err error
+		ctx, err = u(ctx)
+		if err != nil {
+			return nil, err
+		}
+	}
 	r := new__RouteGuide_RouteChatSrvClientStream(ctx)
 	go func() {
 		err := client.Server.RouteChat(&r._RouteGuide_RouteChatSrvServerStream)
